@@ -11,16 +11,28 @@
  * @package         wordpress-thumbor
  */
 
- if ( ! defined( 'TACHYON_URL' ) || ! TACHYON_URL ) {
-	return;
-}
+use Eighteen73\Thumbor\ThumborImage;
 
-require_once( dirname( __FILE__ ) . '/includes/classes/class-tachyon.php' );
+spl_autoload_register(
+	function ( $class_name ) {
+		$path_parts = explode( '\\', $class_name );
 
-Tachyon::instance();
+		if ( ! empty( $path_parts ) ) {
+			$package = $path_parts[0];
+
+			unset( $path_parts[0] );
+
+			if ( 'Eighteen73' === $package ) {
+				require_once __DIR__ . '/includes/classes/' . implode( '/', $path_parts ) . '.php';
+			}
+		}
+	}
+);
+
+ThumborImage::instance();
 
 /**
- * Generates a Tachyon URL.
+ * Generates a Thumbor URL.
  *
  * @see https://docs.altis-dxp.com/media/dynamic-images/
  *
@@ -29,7 +41,11 @@ Tachyon::instance();
  * @param string|null $scheme One of http or https.
  * @return string The raw final URL. You should run this through esc_url() before displaying it.
  */
-function tachyon_url( $image_url, $args = [], $scheme = null ) {
+function thumbor_url( $image_url, $args = [], $scheme = null ) {
+
+	if ( ! defined( 'THUMBOR_URL' ) ) {
+		return;
+	}
 
 	$upload_dir = wp_upload_dir();
 	$upload_baseurl = $upload_dir['baseurl'];
@@ -47,30 +63,30 @@ function tachyon_url( $image_url, $args = [], $scheme = null ) {
 		return $image_url;
 	}
 
-	if ( false !== apply_filters( 'tachyon_skip_for_url', false, $image_url, $args, $scheme ) ) {
+	if ( false !== apply_filters( 'thumbor_skip_for_url', false, $image_url, $args, $scheme ) ) {
 		return $image_url;
 	}
 
-	$image_url = apply_filters( 'tachyon_pre_image_url', $image_url, $args, $scheme );
-	$args      = apply_filters( 'tachyon_pre_args', $args, $image_url, $scheme );
+	$image_url = apply_filters( 'thumbor_pre_image_url', $image_url, $args, $scheme );
+	$args      = apply_filters( 'thumbor_pre_args', $args, $image_url, $scheme );
 
-	$tachyon_url = str_replace( $upload_baseurl, TACHYON_URL, $image_url );
+	$thumbor_url = str_replace( $upload_baseurl, THUMBOR_URL, $image_url );
 	if ( $args ) {
 		if ( is_array( $args ) ) {
 			// URL encode all param values, as this is not handled by add_query_arg.
-			$tachyon_url = add_query_arg( array_map( 'rawurlencode', $args ), $tachyon_url );
+			$thumbor_url = add_query_arg( array_map( 'rawurlencode', $args ), $thumbor_url );
 		} else {
 			// You can pass a query string for complicated requests but where you still want CDN subdomain help, etc.
-			$tachyon_url .= '?' . $args;
+			$thumbor_url .= '?' . $args;
 		}
 	}
 
 	/**
-	 * Allows a final modification of the generated tachyon URL.
+	 * Allows a final modification of the generated Thumbor URL.
 	 *
-	 * @param string $tachyon_url The final tachyon image URL including query args.
+	 * @param string $thumbor_url The final Thumbor image URL including query args.
 	 * @param string $image_url   The image URL without query args.
 	 * @param array  $args        A key value array of the query args appended to $image_url.
 	 */
-	return apply_filters( 'tachyon_url', $tachyon_url, $image_url, $args );
+	return apply_filters( 'thumbor_url', $thumbor_url, $image_url, $args );
 }
