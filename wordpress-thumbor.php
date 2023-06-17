@@ -70,15 +70,42 @@ function thumbor_url( $image_url, $args = [], $scheme = null ) {
 	$image_url = apply_filters( 'thumbor_pre_image_url', $image_url, $args, $scheme );
 	$args      = apply_filters( 'thumbor_pre_args', $args, $image_url, $scheme );
 
-	$thumbor_url = str_replace( $upload_baseurl, THUMBOR_URL, $image_url );
-	if ( $args ) {
-		if ( is_array( $args ) ) {
-			// URL encode all param values, as this is not handled by add_query_arg.
-			$thumbor_url = add_query_arg( array_map( 'rawurlencode', $args ), $thumbor_url );
-		} else {
-			// You can pass a query string for complicated requests but where you still want CDN subdomain help, etc.
-			$thumbor_url .= '?' . $args;
-		}
+	if (isset($args['fit'])) {
+		$scale = null;
+		$width = $args['fit'][0];
+		$height = $args['fit'][1];
+	} elseif (isset($args['resize'])) {
+		$scale = 'fit-in';
+		$width = $args['resize'][0];
+		$height = $args['resize'][1];
+	} elseif (isset($args['w'])) {
+		$scale = 'fit-in';
+		$width = $args['w'];
+		$height = 'orig';
+	} elseif (isset($args['h'])) {
+		$scale = 'fit-in';
+		$width = 'orig';
+		$height = $args['h'];
+	} else {
+		$scale = 'fit-in';
+		$width = 'orig';
+		$height = 'orig';
+	}
+
+	$urlParts = [
+		'scale' => $scale,
+		'size' => "{$width}x{$height}",
+		'filters' => null,
+		'smart' => null,
+	];
+
+	$thumbor_url = implode('/', array_filter($urlParts)).'/'.urlencode($image_url);
+
+	if ( defined( 'THUMBOR_SECRET' ) && ! empty( THUMBOR_SECRET ) ) {
+		$signature = hash_hmac( 'sha1', $thumbor_url, THUMBOR_SECRET, true );
+		$thumbor_url = THUMBOR_URL . '/' . strtr( base64_encode( $signature ), '/+', '_-' ) . '/' . $thumbor_url;
+	} else {
+		$thumbor_url = THUMBOR_URL . '/unsafe/' . $thumbor_url;
 	}
 
 	/**

@@ -135,7 +135,7 @@ class ThumborImage {
 			$height = (int) $width_height_string[2];
 
 			if ( $width && $height ) {
-				return [ $width, $height ];
+				return [$width, $height];
 			}
 		}
 
@@ -385,7 +385,7 @@ class ThumborImage {
 
 					if ( false !== $width && false !== $height && false === strpos( $width, '%' ) && false === strpos( $height, '%' ) ) {
 						if ( ! isset( $size ) || $size !== 'full' ) {
-							$args[ $transform ] = $width . ',' . $height;
+							$args[ $transform ] = [$width, $height];
 						}
 
 						// Set the gravity from the registered image size.
@@ -661,7 +661,7 @@ class ThumborImage {
 
 					// Add transform args if size is intermediate.
 					if ( $is_intermediate ) {
-						$thumbor_args[ $transform ] = $image_args['width'] . ',' . $image_args['height'];
+						$thumbor_args[ $transform ] = [$image_args['width'], $image_args['height']];
 					}
 
 					if ( $is_intermediate && 'resize' === $transform && is_array( $image_args['crop'] ) ) {
@@ -734,7 +734,7 @@ class ThumborImage {
 
 				// Expose arguments to a filter before passing to Thumbor.
 				if ( $is_intermediate ) {
-					$thumbor_args['fit'] = $width . ',' . $height;
+					$thumbor_args['fit'] = [$width, $height];
 				}
 
 				/**
@@ -799,7 +799,7 @@ class ThumborImage {
 			$args = [];
 			if ( 'w' === $source['descriptor'] ) {
 				if ( $height && ( intval( $source['value'] ) === intval( $width ) ) ) {
-					$args['resize'] = $width . ',' . $height;
+					$args['resize'] = [$width, $height];
 				} else {
 					$args['w'] = $source['value'];
 				}
