@@ -94,14 +94,14 @@ function thumbor_url( $image_url, $args = [], $scheme = null ) {
 		$height = 'orig';
 	}
 
-	$urlParts = [
+	$url_parts = [
 		'scale'   => $scale,
 		'size'    => "{$width}x{$height}",
 		'filters' => null,
 		'smart'   => null,
 	];
 
-	$thumbor_url = implode( '/', array_filter( $urlParts ) ) . '/' . urlencode( $image_url );
+	$thumbor_url = implode( '/', array_filter( $url_parts ) ) . '/' . urlencode( $image_url );
 
 	if ( defined( 'THUMBOR_SECRET' ) && ! empty( THUMBOR_SECRET ) ) {
 		$signature   = hash_hmac( 'sha1', $thumbor_url, THUMBOR_SECRET, true );

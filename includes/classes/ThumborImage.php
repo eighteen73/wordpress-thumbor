@@ -2,11 +2,10 @@
 /**
  * Thumbor Plugin.
  *
- * phpcs:disable HM.Functions.NamespacedFunctions.MissingNamespace
- * phpcs:disable PSR1.Classes.ClassDeclaration.MissingNamespace
+ * @package wordpress-thumbor
  */
 
- namespace Eighteen73\Thumbor;
+namespace Eighteen73\Thumbor;
 
 /**
  * Plugin singleton class.
@@ -17,7 +16,7 @@ class ThumborImage {
 	 *
 	 * @var Thumbor|null
 	 */
-	private static $__instance = null;
+	private static $instance = null;
 
 	/**
 	 * Allowed extensions must match https://code.trac.wordpress.org/browser/photon/index.php#L33
@@ -52,13 +51,13 @@ class ThumborImage {
 			return;
 		}
 
-		if ( ! is_a( self::$__instance, __CLASS__ ) ) {
-			$class            = get_called_class();
-			self::$__instance = new $class();
-			self::$__instance->setup();
+		if ( ! is_a( self::$instance, __CLASS__ ) ) {
+			$class          = get_called_class();
+			self::$instance = new $class();
+			self::$instance->setup();
 		}
 
-		return self::$__instance;
+		return self::$instance;
 	}
 
 	/**
@@ -187,7 +186,8 @@ class ThumborImage {
 				$fullsize_url = false;
 
 				// Identify image source.
-				$src = $src_orig = $images['img_url'][ $index ];
+				$src      = $images['img_url'][ $index ];
+				$src_orig = $src;
 
 				/**
 				 * Allow specific images to be skipped by Thumbor.
@@ -205,17 +205,22 @@ class ThumborImage {
 				// Support Automattic's Lazy Load plugin.
 				// Can't modify $tag yet as we need unadulterated version later.
 				if ( preg_match( '#data-lazy-src=["|\'](.+?)["|\']#i', $images['img_tag'][ $index ], $lazy_load_src ) ) {
-					$placeholder_src = $placeholder_src_orig = $src;
-					$src             = $src_orig = $lazy_load_src[1];
+					$placeholder_src      = $src;
+					$placeholder_src_orig = $placeholder_src;
+					$src                  = $lazy_load_src[1];
+					$src_orig             = $src;
 				} elseif ( preg_match( '#data-lazy-original=["|\'](.+?)["|\']#i', $images['img_tag'][ $index ], $lazy_load_src ) ) {
-					$placeholder_src = $placeholder_src_orig = $src;
-					$src             = $src_orig = $lazy_load_src[1];
+					$placeholder_src      = $src;
+					$placeholder_src_orig = $placeholder_src;
+					$src                  = $lazy_load_src[1];
+					$src_orig             = $src;
 				}
 
 				// Check if image URL should be used with Thumbor.
 				if ( self::validate_image_url( $src ) ) {
 					// Find the width and height attributes.
-					$width = $height = false;
+					$width  = false;
+					$height = false;
 
 					// First, check the image tag.
 					if ( preg_match( '#width=["|\']?([\d%]+)["|\']?#i', $images['img_tag'][ $index ], $width_string ) ) {
@@ -235,7 +240,8 @@ class ThumborImage {
 
 					// Can't pass both a relative width and height, so unset the height in favor of not breaking the horizontal layout.
 					if ( false !== strpos( $width, '%' ) && false !== strpos( $height, '%' ) ) {
-						$width = $height = false;
+						$width  = false;
+						$height = false;
 					}
 
 					// Detect WP registered image size from HTML class.
@@ -987,9 +993,9 @@ class ThumborImage {
 		$route = $request->get_route();
 
 		if ( false !== strpos( $route, 'wp/v2/media' ) && 'edit' === $request['context'] ) {
-			// Don't use `__return_true()`: Use something unique. See ::_override_image_downsize_in_rest_edit_context()
+			// Don't use `__return_true()`: Use something unique. See ::override_image_downsize_in_rest_edit_context()
 			// Late execution to avoid conflict with other plugins as we really don't want to run in this situation.
-			add_filter( 'thumbor_override_image_downsize', [ $this, '_override_image_downsize_in_rest_edit_context' ], 999999 );
+			add_filter( 'thumbor_override_image_downsize', [ $this, 'override_image_downsize_in_rest_edit_context' ], 999999 );
 		}
 
 		return $response;
@@ -997,7 +1003,7 @@ class ThumborImage {
 
 	/**
 	 * Remove the override we may have added in ::should_rest_image_downsize()
-	 * Since ::_override_image_downsize_in_rest_edit_context() is only
+	 * Since ::override_image_downsize_in_rest_edit_context() is only
 	 * every used here, we can always remove it without ever worrying
 	 * about breaking any other configuration.
 	 *
@@ -1005,7 +1011,7 @@ class ThumborImage {
 	 * @return mixed Unchanged $response
 	 */
 	public function cleanup_rest_image_downsize( $response ) {
-		remove_filter( 'thumbor_override_image_downsize', [ $this, '_override_image_downsize_in_rest_edit_context' ], 999999 );
+		remove_filter( 'thumbor_override_image_downsize', [ $this, 'override_image_downsize_in_rest_edit_context' ], 999999 );
 		return $response;
 	}
 
@@ -1019,7 +1025,7 @@ class ThumborImage {
 	 * @internal
 	 * @return true
 	 */
-	public function _override_image_downsize_in_rest_edit_context() {
+	public function override_image_downsize_in_rest_edit_context() {
 		return true;
 	}
 }

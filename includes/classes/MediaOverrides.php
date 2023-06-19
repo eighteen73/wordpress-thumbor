@@ -2,11 +2,10 @@
 /**
  * Override native media behaviour.
  *
- * phpcs:disable HM.Functions.NamespacedFunctions.MissingNamespace
- * phpcs:disable PSR1.Classes.ClassDeclaration.MissingNamespace
+ * @package wordpress-thumbor
  */
 
- namespace Eighteen73\Thumbor;
+namespace Eighteen73\Thumbor;
 
 /**
  * Plugin singleton class.
@@ -17,7 +16,7 @@ class MediaOverrides {
 	 *
 	 * @var Thumbor|null
 	 */
-	private static $__instance = null;
+	private static $instance = null;
 
 	/**
 	 * Singleton implementation
@@ -30,13 +29,13 @@ class MediaOverrides {
 			return;
 		}
 
-		if ( ! is_a( self::$__instance, __CLASS__ ) ) {
-			$class            = get_called_class();
-			self::$__instance = new $class();
-			self::$__instance->setup();
+		if ( ! is_a( self::$instance, __CLASS__ ) ) {
+			$class          = get_called_class();
+			self::$instance = new $class();
+			self::$instance->setup();
 		}
 
-		return self::$__instance;
+		return self::$instance;
 	}
 
 	/**
