@@ -31,8 +31,8 @@ class MediaOverrides {
 		}
 
 		if ( ! is_a( self::$__instance, __CLASS__ ) ) {
-			$class = get_called_class();
-			self::$__instance = new  $class;
+			$class            = get_called_class();
+			self::$__instance = new $class();
 			self::$__instance->setup();
 		}
 

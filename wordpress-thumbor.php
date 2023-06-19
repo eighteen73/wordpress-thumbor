@@ -38,9 +38,9 @@ ThumborImage::instance();
  *
  * @see https://docs.altis-dxp.com/media/dynamic-images/
  *
- * @param string $image_url URL to the publicly accessible image you want to manipulate.
+ * @param string       $image_url URL to the publicly accessible image you want to manipulate.
  * @param array|string $args An array of arguments, i.e. array( 'w' => '300', 'resize' => array( 123, 456 ) ), or in string form (w=123&h=456).
- * @param string|null $scheme One of http or https.
+ * @param string|null  $scheme One of http or https.
  * @return string The raw final URL. You should run this through esc_url() before displaying it.
  */
 function thumbor_url( $image_url, $args = [], $scheme = null ) {
@@ -49,7 +49,7 @@ function thumbor_url( $image_url, $args = [], $scheme = null ) {
 		return;
 	}
 
-	$upload_dir = wp_upload_dir();
+	$upload_dir     = wp_upload_dir();
 	$upload_baseurl = $upload_dir['baseurl'];
 
 	if ( is_multisite() ) {
@@ -72,39 +72,39 @@ function thumbor_url( $image_url, $args = [], $scheme = null ) {
 	$image_url = apply_filters( 'thumbor_pre_image_url', $image_url, $args, $scheme );
 	$args      = apply_filters( 'thumbor_pre_args', $args, $image_url, $scheme );
 
-	if (isset($args['fit'])) {
-		$scale = null;
-		$width = $args['fit'][0];
+	if ( isset( $args['fit'] ) ) {
+		$scale  = null;
+		$width  = $args['fit'][0];
 		$height = $args['fit'][1];
-	} elseif (isset($args['resize'])) {
-		$scale = 'fit-in';
-		$width = $args['resize'][0];
+	} elseif ( isset( $args['resize'] ) ) {
+		$scale  = 'fit-in';
+		$width  = $args['resize'][0];
 		$height = $args['resize'][1];
-	} elseif (isset($args['w'])) {
-		$scale = 'fit-in';
-		$width = $args['w'];
+	} elseif ( isset( $args['w'] ) ) {
+		$scale  = 'fit-in';
+		$width  = $args['w'];
 		$height = 'orig';
-	} elseif (isset($args['h'])) {
-		$scale = 'fit-in';
-		$width = 'orig';
+	} elseif ( isset( $args['h'] ) ) {
+		$scale  = 'fit-in';
+		$width  = 'orig';
 		$height = $args['h'];
 	} else {
-		$scale = 'fit-in';
-		$width = 'orig';
+		$scale  = 'fit-in';
+		$width  = 'orig';
 		$height = 'orig';
 	}
 
 	$urlParts = [
-		'scale' => $scale,
-		'size' => "{$width}x{$height}",
+		'scale'   => $scale,
+		'size'    => "{$width}x{$height}",
 		'filters' => null,
-		'smart' => null,
+		'smart'   => null,
 	];
 
-	$thumbor_url = implode('/', array_filter($urlParts)).'/'.urlencode($image_url);
+	$thumbor_url = implode( '/', array_filter( $urlParts ) ) . '/' . urlencode( $image_url );
 
 	if ( defined( 'THUMBOR_SECRET' ) && ! empty( THUMBOR_SECRET ) ) {
-		$signature = hash_hmac( 'sha1', $thumbor_url, THUMBOR_SECRET, true );
+		$signature   = hash_hmac( 'sha1', $thumbor_url, THUMBOR_SECRET, true );
 		$thumbor_url = THUMBOR_URL . '/' . strtr( base64_encode( $signature ), '/+', '_-' ) . '/' . $thumbor_url;
 	} else {
 		$thumbor_url = THUMBOR_URL . '/unsafe/' . $thumbor_url;

@@ -53,8 +53,8 @@ class ThumborImage {
 		}
 
 		if ( ! is_a( self::$__instance, __CLASS__ ) ) {
-			$class = get_called_class();
-			self::$__instance = new  $class;
+			$class            = get_called_class();
+			self::$__instance = new $class();
 			self::$__instance->setup();
 		}
 
@@ -131,11 +131,11 @@ class ThumborImage {
 		$width_height_string = [];
 
 		if ( preg_match( '#-(\d+)x(\d+)\.(?:' . implode( '|', self::$extensions ) . '){1}$#i', $src, $width_height_string ) ) {
-			$width = (int) $width_height_string[1];
+			$width  = (int) $width_height_string[1];
 			$height = (int) $width_height_string[2];
 
 			if ( $width && $height ) {
-				return [$width, $height];
+				return [ $width, $height ];
 			}
 		}
 
@@ -156,8 +156,8 @@ class ThumborImage {
 		if ( ! empty( $images ) ) {
 			$content_width = isset( $GLOBALS['content_width'] ) ? $GLOBALS['content_width'] : false;
 
-			$image_sizes = self::image_sizes();
-			$upload_dir = wp_upload_dir();
+			$image_sizes    = self::image_sizes();
+			$upload_dir     = wp_upload_dir();
 			$attachment_ids = [];
 
 			foreach ( $images[0] as $tag ) {
@@ -206,10 +206,10 @@ class ThumborImage {
 				// Can't modify $tag yet as we need unadulterated version later.
 				if ( preg_match( '#data-lazy-src=["|\'](.+?)["|\']#i', $images['img_tag'][ $index ], $lazy_load_src ) ) {
 					$placeholder_src = $placeholder_src_orig = $src;
-					$src = $src_orig = $lazy_load_src[1];
+					$src             = $src_orig = $lazy_load_src[1];
 				} elseif ( preg_match( '#data-lazy-original=["|\'](.+?)["|\']#i', $images['img_tag'][ $index ], $lazy_load_src ) ) {
 					$placeholder_src = $placeholder_src_orig = $src;
-					$src = $src_orig = $lazy_load_src[1];
+					$src             = $src_orig = $lazy_load_src[1];
 				}
 
 				// Check if image URL should be used with Thumbor.
@@ -229,8 +229,8 @@ class ThumborImage {
 					// If image tag lacks width or height arguments, try to determine from strings WP appends to resized image filenames.
 					if ( ! $width || ! $height ) {
 						$size_from_file = static::parse_dimensions_from_filename( $src );
-						$width = $width ?: $size_from_file[0];
-						$height = $height ?: $size_from_file[1];
+						$width          = $width ?: $size_from_file[0];
+						$height         = $height ?: $size_from_file[1];
 					}
 
 					// Can't pass both a relative width and height, so unset the height in favor of not breaking the horizontal layout.
@@ -244,9 +244,9 @@ class ThumborImage {
 
 						if ( false === $width && false === $height && isset( $size ) && array_key_exists( $size, $image_sizes ) ) {
 							$size_from_wp = wp_get_attachment_image_src( $attachment_id, $size );
-							$width = $size_from_wp[1];
-							$height = $size_from_wp[2];
-							$transform = $image_sizes[ $size ]['crop'] ? 'resize' : 'fit';
+							$width        = $size_from_wp[1];
+							$height       = $size_from_wp[2];
+							$transform    = $image_sizes[ $size ]['crop'] ? 'resize' : 'fit';
 						}
 					}
 
@@ -289,7 +289,7 @@ class ThumborImage {
 										$sizes = wp_list_filter( $meta['sizes'], [ 'file' => basename( $src ) ] );
 										if ( $sizes ) {
 											$size_names = array_keys( $sizes );
-											$size = array_pop( $size_names );
+											$size       = array_pop( $size_names );
 										}
 									}
 								}
@@ -310,8 +310,8 @@ class ThumborImage {
 								}
 
 								if ( isset( $size ) && false === $width && false === $height && array_key_exists( $size, $image_sizes ) ) {
-									$width = (int) $image_sizes[ $size ]['width'];
-									$height = (int) $image_sizes[ $size ]['height'];
+									$width     = (int) $image_sizes[ $size ]['width'];
+									$height    = (int) $image_sizes[ $size ]['height'];
 									$transform = $image_sizes[ $size ]['crop'] ? 'resize' : 'fit';
 								}
 
@@ -325,20 +325,20 @@ class ThumborImage {
 								$src_per_wp = wp_get_attachment_image_src( $attachment_id, $size );
 
 								if ( self::validate_image_url( $src_per_wp[0] ) ) {
-									$src = $src_per_wp[0];
+									$src          = $src_per_wp[0];
 									$fullsize_url = true;
 
 									// Prevent image distortion if a detected dimension exceeds the image's natural dimensions.
 									if ( ( false !== $width && $width > $src_per_wp[1] ) || ( false !== $height && $height > $src_per_wp[2] ) ) {
-										$width = false === $width ? false : min( $width, $src_per_wp[1] );
+										$width  = false === $width ? false : min( $width, $src_per_wp[1] );
 										$height = false === $height ? false : min( $height, $src_per_wp[2] );
 									}
 
 									// If no width and height are found, max out at source image's natural dimensions.
 									// Otherwise, respect registered image sizes' cropping setting.
 									if ( false === $width && false === $height ) {
-										$width = $src_per_wp[1];
-										$height = $src_per_wp[2];
+										$width     = $src_per_wp[1];
+										$height    = $src_per_wp[2];
 										$transform = 'fit';
 									} elseif ( isset( $size ) && array_key_exists( $size, $image_sizes ) && isset( $image_sizes[ $size ]['crop'] ) ) {
 										$transform = (bool) $image_sizes[ $size ]['crop'] ? 'resize' : 'fit';
@@ -354,7 +354,7 @@ class ThumborImage {
 					if ( false !== $width && false === strpos( $width, '%' ) && is_numeric( $content_width ) ) {
 						if ( $width > $content_width && false !== $height && false === strpos( $height, '%' ) ) {
 							$height = round( ( $content_width * $height ) / $width );
-							$width = $content_width;
+							$width  = $content_width;
 						} elseif ( $width > $content_width ) {
 							$width = $content_width;
 						}
@@ -385,7 +385,7 @@ class ThumborImage {
 
 					if ( false !== $width && false !== $height && false === strpos( $width, '%' ) && false === strpos( $height, '%' ) ) {
 						if ( ! isset( $size ) || $size !== 'full' ) {
-							$args[ $transform ] = [$width, $height];
+							$args[ $transform ] = [ $width, $height ];
 						}
 
 						// Set the gravity from the registered image size.
@@ -393,16 +393,22 @@ class ThumborImage {
 						// cause Sharp to error and Thumbor to return a 404, it needs to be `southwest`
 						// so we reverse the crop array to y, x order.
 						if ( 'resize' === $transform && isset( $size ) && $size !== 'full' && array_key_exists( $size, $image_sizes ) && is_array( $image_sizes[ $size ]['crop'] ) ) {
-							$args['gravity'] = implode( '', array_map( function ( $v ) {
-								$map = [
-									'top' => 'north',
-									'center' => '',
-									'bottom' => 'south',
-									'left' => 'west',
-									'right' => 'east',
-								];
-								return $map[ $v ];
-							}, array_reverse( $image_sizes[ $size ]['crop'] ) ) );
+							$args['gravity'] = implode(
+								'',
+								array_map(
+									function ( $v ) {
+										$map = [
+											'top'    => 'north',
+											'center' => '',
+											'bottom' => 'south',
+											'left'   => 'west',
+											'right'  => 'east',
+										];
+										return $map[ $v ];
+									},
+									array_reverse( $image_sizes[ $size ]['crop'] )
+								)
+							);
 						}
 					} elseif ( false !== $width ) {
 						$args['w'] = $width;
@@ -469,7 +475,7 @@ class ThumborImage {
 
 						// Supplant the original source value with our Thumbor URL.
 						$thumbor_url = esc_url( $thumbor_url );
-						$new_tag = str_replace( $src_orig, $thumbor_url, $new_tag );
+						$new_tag     = str_replace( $src_orig, $thumbor_url, $new_tag );
 
 						// If Lazy Load is in use, pass placeholder image through Thumbor.
 						if ( isset( $placeholder_src ) && self::validate_image_url( $placeholder_src ) ) {
@@ -533,8 +539,8 @@ class ThumborImage {
 	/**
 	 * Filter post thumbnail image retrieval, passing images through Thumbor.
 	 *
-	 * @param string|bool $image Image array.
-	 * @param int $attachment_id The attachment ID.
+	 * @param string|bool  $image Image array.
+	 * @param int          $attachment_id The attachment ID.
 	 * @param string|array $size The target image size.
 	 * @uses is_admin, apply_filters, wp_get_attachment_url, self::validate_image_url, this::image_sizes, thumbor_url
 	 * @filter image_downsize
@@ -578,8 +584,8 @@ class ThumborImage {
 		}
 
 		// Get the image URL and proceed with Thumbor-ification if successful.
-		$image_url = wp_get_attachment_url( $attachment_id );
-		$full_size_meta = wp_get_attachment_metadata( $attachment_id );
+		$image_url       = wp_get_attachment_url( $attachment_id );
+		$full_size_meta  = wp_get_attachment_metadata( $attachment_id );
 		$is_intermediate = false;
 
 		if ( $image_url ) {
@@ -609,7 +615,7 @@ class ThumborImage {
 						if ( $image_resized ) { // This could be false when the requested image size is larger than the full-size image.
 							$image_meta['width']  = $image_resized[6];
 							$image_meta['height'] = $image_resized[7];
-							$is_intermediate = true;
+							$is_intermediate      = true;
 						}
 					}
 				} else {
@@ -635,7 +641,7 @@ class ThumborImage {
 				}
 
 				// Prevent upscaling.
-				$image_args['width'] = min( (int) $image_args['width'], (int) $full_size_meta['width'] );
+				$image_args['width']  = min( (int) $image_args['width'], (int) $full_size_meta['width'] );
 				$image_args['height'] = min( (int) $image_args['height'], (int) $full_size_meta['height'] );
 
 				// Respect $content_width settings.
@@ -653,7 +659,7 @@ class ThumborImage {
 					// If resizing:
 					// Both width & height are required, image args should be exact dimensions.
 					if ( $transform === 'resize' ) {
-						$image_args['width'] = $image_args['width'] ?: $width;
+						$image_args['width']  = $image_args['width'] ?: $width;
 						$image_args['height'] = $image_args['height'] ?: $height;
 					}
 
@@ -661,20 +667,26 @@ class ThumborImage {
 
 					// Add transform args if size is intermediate.
 					if ( $is_intermediate ) {
-						$thumbor_args[ $transform ] = [$image_args['width'], $image_args['height']];
+						$thumbor_args[ $transform ] = [ $image_args['width'], $image_args['height'] ];
 					}
 
 					if ( $is_intermediate && 'resize' === $transform && is_array( $image_args['crop'] ) ) {
-						$thumbor_args['gravity'] = implode( '', array_map( function ( $v ) {
-							$map = [
-								'top' => 'north',
-								'center' => '',
-								'bottom' => 'south',
-								'left' => 'west',
-								'right' => 'east',
-							];
-							return $map[ $v ];
-						}, array_reverse( $image_args['crop'] ) ) );
+						$thumbor_args['gravity'] = implode(
+							'',
+							array_map(
+								function ( $v ) {
+									$map = [
+										'top'    => 'north',
+										'center' => '',
+										'bottom' => 'south',
+										'left'   => 'west',
+										'right'  => 'east',
+									];
+									return $map[ $v ];
+								},
+								array_reverse( $image_args['crop'] )
+							)
+						);
 					}
 				}
 
@@ -705,7 +717,7 @@ class ThumborImage {
 				];
 			} elseif ( is_array( $size ) ) {
 				// Pull width and height values from the provided array, if possible.
-				$width = isset( $size[0] ) ? (int) $size[0] : false;
+				$width  = isset( $size[0] ) ? (int) $size[0] : false;
 				$height = isset( $size[1] ) ? (int) $size[1] : false;
 
 				// Don't bother if necessary parameters aren't passed.
@@ -718,12 +730,12 @@ class ThumborImage {
 					$image_resized = image_resize_dimensions( $image_meta['width'], $image_meta['height'], $width, $height );
 					if ( $image_resized ) {
 						// Use the resized image dimensions.
-						$width = $image_resized[6];
-						$height = $image_resized[7];
+						$width           = $image_resized[6];
+						$height          = $image_resized[7];
 						$is_intermediate = true;
 					} else {
 						// Resized image would be larger than original.
-						$width = $image_meta['width'];
+						$width  = $image_meta['width'];
 						$height = $image_meta['height'];
 					}
 				}
@@ -734,7 +746,7 @@ class ThumborImage {
 
 				// Expose arguments to a filter before passing to Thumbor.
 				if ( $is_intermediate ) {
-					$thumbor_args['fit'] = [$width, $height];
+					$thumbor_args['fit'] = [ $width, $height ];
 				}
 
 				/**
@@ -770,11 +782,11 @@ class ThumborImage {
 	 * Filters an array of image `srcset` values, replacing each URL with its Thumbor equivalent.
 	 *
 	 * @since 3.8.0
-	 * @param array $sources An array of image urls and widths.
-	 * @param array $size_array List of sizes for the srcset.
+	 * @param array  $sources An array of image urls and widths.
+	 * @param array  $size_array List of sizes for the srcset.
 	 * @param string $image_src Current image URL.
-	 * @param array $image_meta Image meta data.
-	 * @param int $attachment_id The attachment ID.
+	 * @param array  $image_meta Image meta data.
+	 * @param int    $attachment_id The attachment ID.
 	 * @uses self::validate_image_url, thumbor_url
 	 * @return array An array of Thumbor image urls and widths.
 	 */
@@ -786,7 +798,7 @@ class ThumborImage {
 				continue;
 			}
 
-			$url = $source['url'];
+			$url                    = $source['url'];
 			list( $width, $height ) = static::parse_dimensions_from_filename( $url );
 
 			// It's quicker to get the full size with the data we have already, if available.
@@ -799,7 +811,7 @@ class ThumborImage {
 			$args = [];
 			if ( 'w' === $source['descriptor'] ) {
 				if ( $height && ( intval( $source['value'] ) === intval( $width ) ) ) {
-					$args['resize'] = [$width, $height];
+					$args['resize'] = [ $width, $height ];
 				} else {
 					$args['w'] = $source['value'];
 				}
@@ -860,7 +872,7 @@ class ThumborImage {
 			return false;
 		}
 
-		$upload_dir = wp_upload_dir();
+		$upload_dir     = wp_upload_dir();
 		$upload_baseurl = $upload_dir['baseurl'];
 
 		if ( is_multisite() ) {
@@ -903,12 +915,12 @@ class ThumborImage {
 
 			// Populate an array matching the data structure of $_wp_additional_image_sizes so we have a consistent structure for image sizes.
 			$images = [
-				'thumb'  => [
+				'thumb'        => [
 					'width'  => intval( get_option( 'thumbnail_size_w' ) ),
 					'height' => intval( get_option( 'thumbnail_size_h' ) ),
 					'crop'   => (bool) get_option( 'thumbnail_crop' ),
 				],
-				'medium' => [
+				'medium'       => [
 					'width'  => intval( get_option( 'medium_size_w' ) ),
 					'height' => intval( get_option( 'medium_size_h' ) ),
 					'crop'   => false,
@@ -918,12 +930,12 @@ class ThumborImage {
 					'height' => intval( get_option( 'medium_large_size_h' ) ),
 					'crop'   => false,
 				],
-				'large'  => [
+				'large'        => [
 					'width'  => intval( get_option( 'large_size_w' ) ),
 					'height' => intval( get_option( 'large_size_h' ) ),
 					'crop'   => false,
 				],
-				'full'   => [
+				'full'         => [
 					'width'  => null,
 					'height' => null,
 					'crop'   => false,
@@ -956,8 +968,8 @@ class ThumborImage {
 	 * if determined we are using it in the edit context, we'll false out the `thumbor_override_image_downsize` filter.
 	 *
 	 * @author JetPack Photo / Automattic
-	 * @param null|WP_Error $response Result to send to the client. Usually a WP_REST_Response or WP_Error.
-	 * @param array $endpoint_data Route handler used for the request.
+	 * @param null|WP_Error   $response Result to send to the client. Usually a WP_REST_Response or WP_Error.
+	 * @param array           $endpoint_data Route handler used for the request.
 	 * @param WP_REST_Request $request  Request used to generate the response.
 	 *
 	 * @return null|WP_Error The original response object without modification.
