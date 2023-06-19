@@ -11,6 +11,7 @@
  * @package         wordpress-thumbor
  */
 
+use Eighteen73\Thumbor\MediaOverrides;
 use Eighteen73\Thumbor\ThumborImage;
 
 spl_autoload_register(
@@ -29,6 +30,7 @@ spl_autoload_register(
 	}
 );
 
+MediaOverrides::instance();
 ThumborImage::instance();
 
 /**
