@@ -57,10 +57,32 @@ class MediaOverrides {
 		}
 
 		// Don't scale down big images
-		add_filter( 'big_image_size_threshold', '__return_false' );
+		add_filter( 'big_image_size_threshold', [ $this, 'image_threshold' ], 999, 1 );
 
 		// Don't resize any images
 		add_filter( 'intermediate_image_sizes_advanced', [ $this, 'prevent_resizing' ], 10, 5 );
+	}
+
+	/**
+	 * Prevents any images from being automatically created.
+	 *
+	 * @param int $threshold The threshold value in pixels.
+	 *
+	 * @return bool|int The new “big image” threshold value.
+	 */
+	public static function image_threshold( $threshold ) {
+
+		if ( ! defined( 'THUMBOR_UPLOAD_IMAGE_THRESHOLD' ) ) {
+			return $threshold;
+		}
+
+		if ( THUMBOR_UPLOAD_IMAGE_THRESHOLD === false ) {
+			return false;
+		} elseif ( is_int( THUMBOR_UPLOAD_IMAGE_THRESHOLD ) ) {
+			return THUMBOR_UPLOAD_IMAGE_THRESHOLD;
+		}
+
+		return $threshold;
 	}
 
 	/**

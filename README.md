@@ -23,6 +23,20 @@ define( 'THUMBOR_SECRET', 'your_thumbor_secret' );
 
 If you Thumbor server runs in unsafe mode (which is _highly_ discouraged) you may set `THUMBOR_SECRET` to `null`.
 
+### Optional: Disabling “big image” resizing
+
+WordPress can automatically resize large image uploads which will save unnecessarily large requests from your Thumbor server. This plugin can change that limit with the following configuration. 
+
+```php
+# Disable “big image” resizing
+define( 'THUMBOR_UPLOAD_IMAGE_THRESHOLD', false );
+
+# Set the longest image edge
+define( 'THUMBOR_UPLOAD_IMAGE_THRESHOLD', 2000 );
+```
+
+See [`big_image_size_threshold`](https://developer.wordpress.org/reference/hooks/big_image_size_threshold/) docs for more information.
+
 ### Deactivating/pausing the plugin
 
 The plugin automatically deactivates itself when `THUMBOR_URL` is not set. So in your development environment you can remove the above configuration to make WordPress return to its default behaviour.
