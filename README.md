@@ -37,9 +37,25 @@ define( 'THUMBOR_UPLOAD_IMAGE_THRESHOLD', 2000 );
 
 See [`big_image_size_threshold`](https://developer.wordpress.org/reference/hooks/big_image_size_threshold/) docs for more information.
 
-### Deactivating/pausing the plugin
+### Optional: Delete prior image files
+
+Once the plugin is enabled you can make use of a WP-CLI command to delete any image derivatives that have already been created.
+
+**Use this command with great care because it will delete media files from your server.**
+
+```shell
+wp media regenerate
+```
+
+## Deactivating/pausing the plugin
 
 The plugin automatically deactivates itself when `THUMBOR_URL` is not set. So in your development environment you can remove the above configuration to make WordPress return to its default behaviour.
+
+While enabled the plugin has prevented WordPress from making it's own resized versions of images. You can use the following WP-CLI command to generate any missing images after disabling the plugin:
+
+```shell
+wp media regenerate --only-missing
+```
 
 ## Credits
 
