@@ -96,7 +96,4 @@ class MediaOverrides {
 	public static function prevent_resizing( $sizes, $image_meta ) {
 		return [];
 	}
-
-
-
 }
