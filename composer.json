@@ -1,28 +1,23 @@
 {
-  "name": "eighteen73/wordpress-thumbor",
+	"name": "eighteen73/wordpress-thumbor",
   "description": "A WordPress plugin to serve media via a Thumbor server",
-  "type": "wordpress-plugin",
-  "license": "MIT",
-  "autoload": {
-    "psr-4": {
-      "Eighteen73\\Thumbor\\": "includes/classes/"
-    }
-  },
-  "minimum-stability": "dev",
-  "require": {
-    "php": ">=7.4"
-  },
-  "require-dev": {
-    "eighteen73/phpcs-composer": "^v1.0"
-  },
-  "config": {
-    "allow-plugins": {
-      "dealerdirect/phpcodesniffer-composer-installer": true
-    }
-  },
-  "scripts": {
-    "test": [
-      "phpcs"
-    ]
-  }
+	"type": "wordpress-plugin",
+	"license": "MIT",
+	"minimum-stability": "stable",
+	"require": {
+		"php": ">=8.0"
+	},
+	"autoload": {
+		"psr-4": {
+			"Eighteen73\\Thumbor\\": "includes/classes/"
+		}
+	},
+	"config": {
+		"allow-plugins": {
+			"dealerdirect/phpcodesniffer-composer-installer": true
+		}
+	},
+	"require-dev": {
+		"eighteen73/wordpress-coding-standards": "^2.0.0"
+	}
 }
