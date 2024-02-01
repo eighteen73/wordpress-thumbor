@@ -115,9 +115,8 @@ function thumbor_url( $image_url, $args = [], $scheme = null ) {
 
 	$thumbor_url = implode( '/', array_filter( $url_parts ) ) . '/' . urlencode( $image_url );
 
-	if ( defined( 'THUMBOR_SECRET' ) && ! empty( THUMBOR_SECRET ) ) {
-		$signature   = hash_hmac( 'sha1', $thumbor_url, THUMBOR_SECRET, true );
-		$thumbor_url = THUMBOR_URL . '/' . strtr( base64_encode( $signature ), '/+', '_-' ) . '/' . $thumbor_url;
+	if ( defined( 'THUMBOR_SECRET_KEY' ) && ! empty( THUMBOR_SECRET_KEY ) ) {
+		$signature   = hash_hmac( 'sha1', $thumbor_url, THUMBOR_SECRET_KEY, true );
 	} else {
 		$thumbor_url = THUMBOR_URL . '/unsafe/' . $thumbor_url;
 	}

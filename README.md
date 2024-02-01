@@ -2,7 +2,7 @@
 
 **This plugin is in early development and may yet undergo changes that affect its functionality. Use it at your own risk until we publish a versioned release.**
 
-This plugin modifies Wordpress image URLs so they can be served from [Thumbor](https://www.thumbor.org/). 
+This plugin modifies Wordpress image URLs so they can be served from [Thumbor](https://www.thumbor.org/).
 
 A well configured Thumbor server can deliver highly optimised images to improve website load times, and take a large of your web server by removing the need for WordPress to generate image derivatives for itself.
 
@@ -18,14 +18,14 @@ Install and activate the plugin as normal then add the following configuration t
 
 ```php
 define( 'THUMBOR_URL', 'https://media.example.com' );
-define( 'THUMBOR_SECRET', 'your_thumbor_secret' );
+define( 'THUMBOR_SECRET_KEY', 'your_thumbor_secret_key' );
 ```
 
-If you Thumbor server runs in unsafe mode (which is _highly_ discouraged) you may set `THUMBOR_SECRET` to `null`.
+If you Thumbor server runs in unsafe mode (which is _highly_ discouraged) you may set `THUMBOR_SECRET_KEY` to `null`.
 
 ### Optional: Disabling “big image” resizing
 
-WordPress can automatically resize large image uploads which will save unnecessarily large requests from your Thumbor server. This plugin can change that limit with the following configuration. 
+WordPress can automatically resize large image uploads which will save unnecessarily large requests from your Thumbor server. This plugin can change that limit with the following configuration.
 
 ```php
 # Disable “big image” resizing
