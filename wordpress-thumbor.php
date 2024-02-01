@@ -73,11 +73,11 @@ function thumbor_url( $image_url, $args = [], $scheme = null ) {
 	$args      = apply_filters( 'thumbor_pre_args', $args, $image_url, $scheme );
 
 	if ( isset( $args['fit'] ) ) {
-		$scale  = null;
+		$scale  = 'fit-in';
 		$width  = $args['fit'][0];
 		$height = $args['fit'][1];
 	} elseif ( isset( $args['resize'] ) ) {
-		$scale  = 'fit-in';
+		$scale  = null;
 		$width  = $args['resize'][0];
 		$height = $args['resize'][1];
 	} elseif ( isset( $args['w'] ) ) {
