@@ -49,6 +49,18 @@ function thumbor_url( $image_url, $args = [], $scheme = null ) {
 		return;
 	}
 
+	/*
+	 * Cache result for unique set of args to save reruns. This is because we're seeing the same image being re-run within a single
+	 * request and there's a chance that filters applied within are expensive. A short TTL is used in case persistent cache is used
+	 * but it doesn't need to be longed lived.
+	 */
+	$cache_key = md5( $image_url . json_encode( $args ) . ( $scheme ?? '' ) );
+	$cache_ttl = 60;
+	$cached_url = wp_cache_get( $cache_key, 'thumbor_url' );
+	if ( $cached_url ) {
+		return $cached_url;
+	}
+
 	$upload_dir     = wp_upload_dir();
 	$upload_baseurl = $upload_dir['baseurl'];
 
@@ -117,5 +129,10 @@ function thumbor_url( $image_url, $args = [], $scheme = null ) {
 	 * @param string $image_url   The image URL without query args.
 	 * @param array  $args        A key value array of the query args appended to $image_url.
 	 */
-	return apply_filters( 'thumbor_url', $thumbor_url, $image_url, $args );
+	$final_thumbor_url = apply_filters( 'thumbor_url', $thumbor_url, $image_url, $args );
+
+	// Cache result to save reruns
+	wp_cache_set( $cache_key, $final_thumbor_url, 'thumbor_url', $cache_ttl );
+
+	return $final_thumbor_url;
 }
