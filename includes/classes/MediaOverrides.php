@@ -25,7 +25,7 @@ class MediaOverrides {
 	 */
 	public static function instance() {
 
-		if ( ! defined( 'THUMBOR_URL' ) ) {
+		if ( ! defined( 'THUMBOR_URL' ) || empty( THUMBOR_URL ) ) {
 			return;
 		}
 

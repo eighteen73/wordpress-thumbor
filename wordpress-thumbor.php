@@ -45,7 +45,7 @@ ThumborImage::instance();
  */
 function thumbor_url( $image_url, $args = [], $scheme = null ) {
 
-	if ( ! defined( 'THUMBOR_URL' ) ) {
+	if ( ! defined( 'THUMBOR_URL' ) || empty( THUMBOR_URL ) ) {
 		return;
 	}
 
@@ -117,8 +117,9 @@ function thumbor_url( $image_url, $args = [], $scheme = null ) {
 
 	if ( defined( 'THUMBOR_SECRET_KEY' ) && ! empty( THUMBOR_SECRET_KEY ) ) {
 		$signature   = hash_hmac( 'sha1', $thumbor_url, THUMBOR_SECRET_KEY, true );
+		$thumbor_url = rtrim( THUMBOR_URL, '/' ) . '/' . strtr( base64_encode( $signature ), '/+', '_-' ) . '/' . $thumbor_url;
 	} else {
-		$thumbor_url = THUMBOR_URL . '/unsafe/' . $thumbor_url;
+		$thumbor_url = rtrim( THUMBOR_URL, '/' ) . '/unsafe/' . $thumbor_url;
 	}
 
 	/**
