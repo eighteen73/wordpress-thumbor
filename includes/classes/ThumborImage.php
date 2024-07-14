@@ -82,6 +82,9 @@ class ThumborImage {
 		add_filter( 'the_content', [ __CLASS__, 'filter_the_content' ], 999999 );
 		add_filter( 'get_post_galleries', [ __CLASS__, 'filter_the_galleries' ], 999999 );
 
+		// Other requested images
+		add_filter( 'wp_get_attachment_image_attributes', [ $this, 'filter_attachment_image_attributes' ], 10, 5 );
+
 		// Core image retrieval.
 		add_filter( 'image_downsize', [ $this, 'filter_image_downsize' ], 10, 3 );
 		add_filter( 'rest_request_before_callbacks', [ $this, 'should_rest_image_downsize' ], 10, 3 );
@@ -539,6 +542,20 @@ class ThumborImage {
 	}
 
 	/**
+	 * Ensure generic images use Thumbor just before rendering them.
+	 *
+	 * @param array        $attr Array of attribute values for the image markup.
+	 * @param WP_Post      $attachment Image attachment post.
+	 * @param string|int[] $size Requested image size.
+	 * @return array
+	 */
+	public static function filter_attachment_image_attributes( $attr, $attachment, $size ) {
+		$image = self::convert_image_url( [], $attr['src'], $attachment, $size );
+
+		return $attr;
+	}
+
+	/**
 	 * * CORE IMAGE RETRIEVAL
 	 **/
 
@@ -591,194 +608,9 @@ class ThumborImage {
 
 		// Get the image URL and proceed with Thumbor-ification if successful.
 		$image_url       = wp_get_attachment_url( $attachment_id );
-		$full_size_meta  = wp_get_attachment_metadata( $attachment_id );
-		$is_intermediate = false;
 
 		if ( $image_url ) {
-			// Check if image URL should be used with Thumbor.
-			if ( ! self::validate_image_url( $image_url ) ) {
-				return $image;
-			}
-
-			// If an image is requested with a size known to WordPress, use that size's settings with Thumbor.
-			if ( ! empty( $full_size_meta ) && ( is_string( $size ) || is_int( $size ) ) && array_key_exists( $size, self::image_sizes() ) ) {
-				$image_args = self::image_sizes();
-				$image_args = $image_args[ $size ];
-
-				$thumbor_args = [];
-
-				$image_meta = image_get_intermediate_size( $attachment_id, $size );
-
-				// 'full' is a special case: We need consistent data regardless of the requested size.
-				if ( 'full' === $size ) {
-					$image_meta = $full_size_meta;
-				} elseif ( ! $image_meta ) {
-					// If we still don't have any image meta at this point, it's probably from a custom thumbnail size
-					// for an image that was uploaded before the custom image was added to the theme.  Try to determine the size manually.
-					$image_meta = $full_size_meta;
-					if ( isset( $image_meta['width'] ) && isset( $image_meta['height'] ) ) {
-						$image_resized = image_resize_dimensions( $image_meta['width'], $image_meta['height'], $image_args['width'], $image_args['height'], $image_args['crop'] );
-						if ( $image_resized ) { // This could be false when the requested image size is larger than the full-size image.
-							$image_meta['width']  = $image_resized[6];
-							$image_meta['height'] = $image_resized[7];
-							$is_intermediate      = true;
-						}
-					}
-				} else {
-					$is_intermediate = true;
-				}
-
-				// Expose determined arguments to a filter before passing to Thumbor.
-				$transform = $image_args['crop'] ? 'resize' : 'fit';
-
-				// If we can't get the width from the image size args, use the width of the
-				// image metadata. We only do this is image_args['width'] is not set, because
-				// we don't want to lose this data. $image_args is used as the Thumbor URL param
-				// args, so we want to keep the original image sizes args. For example, if the image
-				// size is 300x300px, non-cropped, we want to pass `fit=300,300` to Thumbor, instead
-				// of say `resize=300,225`, because semantically, the image size is registered as
-				// 300x300 un-cropped, not 300x225 cropped.
-				if ( empty( $image_args['width'] ) && $transform !== 'resize' ) {
-					$image_args['width'] = isset( $image_meta['width'] ) ? $image_meta['width'] : 0;
-				}
-
-				if ( empty( $image_args['height'] ) && $transform !== 'resize' ) {
-					$image_args['height'] = isset( $image_meta['height'] ) ? $image_meta['height'] : 0;
-				}
-
-				// Prevent upscaling.
-				$image_args['width']  = min( (int) $image_args['width'], (int) $full_size_meta['width'] );
-				$image_args['height'] = min( (int) $image_args['height'], (int) $full_size_meta['height'] );
-
-				// Respect $content_width settings.
-				list( $width, $height ) = image_constrain_size_for_editor( $image_meta['width'], $image_meta['height'], $size, 'display' );
-
-				// Check specified image dimensions and account for possible zero values; Thumbor fails to resize if a dimension is zero.
-				if ( ( 0 === $image_args['width'] || 0 === $image_args['height'] ) && $transform !== 'fit' ) {
-					if ( 0 === $image_args['width'] && 0 < $image_args['height'] ) {
-						$thumbor_args['h'] = $image_args['height'];
-					} elseif ( 0 === $image_args['height'] && 0 < $image_args['width'] ) {
-						$thumbor_args['w'] = $image_args['width'];
-					}
-				} else {
-					// Fit accepts a zero value for either dimension so we allow that.
-					// If resizing:
-					// Both width & height are required, image args should be exact dimensions.
-					if ( $transform === 'resize' ) {
-						$image_args['width']  = $image_args['width'] ?: $width;
-						$image_args['height'] = $image_args['height'] ?: $height;
-					}
-
-					$is_intermediate = ( $image_args['width'] < $full_size_meta['width'] || $image_args['height'] < $full_size_meta['height'] );
-
-					// Add transform args if size is intermediate.
-					if ( $is_intermediate ) {
-						$thumbor_args[ $transform ] = [ $image_args['width'], $image_args['height'] ];
-					}
-
-					if ( $is_intermediate && 'resize' === $transform && is_array( $image_args['crop'] ) ) {
-						$thumbor_args['gravity'] = implode(
-							'',
-							array_map(
-								function ( $v ) {
-									$map = [
-										'top'    => 'north',
-										'center' => '',
-										'bottom' => 'south',
-										'left'   => 'west',
-										'right'  => 'east',
-									];
-									return $map[ $v ];
-								},
-								array_reverse( $image_args['crop'] )
-							)
-						);
-					}
-				}
-
-				/**
-				 * Filter the Thumbor Arguments added to an image when going through Thumbor, when that image size is a string.
-				 * Image size will be a string (e.g. "full", "medium") when it is known to WordPress.
-				 *
-				 * @param array $thumbor_args Array of Thumbor arguments.
-				 * @param array $args {
-				 *   Array of image details.
-				 *
-				 *   @type $image_args Array of Image arguments (width, height, crop).
-				 *   @type $image_url Image URL.
-				 *   @type $attachment_id Attachment ID of the image.
-				 *   @type $size Image size. Can be a string (name of the image size, e.g. full) or an integer.
-				 *   @type $transform Value can be resize or fit.
-				 *                    @see https://developer.wordpress.com/docs/photon/api
-				 * }
-				 */
-				$thumbor_args = apply_filters( 'thumbor_image_downsize_string', $thumbor_args, compact( 'image_args', 'image_url', 'attachment_id', 'size', 'transform' ) );
-
-				// Generate Thumbor URL.
-				$image = [
-					thumbor_url( $image_url, $thumbor_args ),
-					$width,
-					$height,
-					$is_intermediate,
-				];
-			} elseif ( is_array( $size ) ) {
-				// Pull width and height values from the provided array, if possible.
-				$width  = isset( $size[0] ) ? (int) $size[0] : false;
-				$height = isset( $size[1] ) ? (int) $size[1] : false;
-
-				// Don't bother if necessary parameters aren't passed.
-				if ( ! $width || ! $height ) {
-					return $image;
-				}
-
-				$image_meta = wp_get_attachment_metadata( $attachment_id );
-				if ( isset( $image_meta['width'] ) && isset( $image_meta['height'] ) ) {
-					$image_resized = image_resize_dimensions( $image_meta['width'], $image_meta['height'], $width, $height );
-					if ( $image_resized ) {
-						// Use the resized image dimensions.
-						$width           = $image_resized[6];
-						$height          = $image_resized[7];
-						$is_intermediate = true;
-					} else {
-						// Resized image would be larger than original.
-						$width  = $image_meta['width'];
-						$height = $image_meta['height'];
-					}
-				}
-
-				list( $width, $height ) = image_constrain_size_for_editor( $width, $height, $size );
-
-				$thumbor_args = [];
-
-				// Expose arguments to a filter before passing to Thumbor.
-				if ( $is_intermediate ) {
-					$thumbor_args['fit'] = [ $width, $height ];
-				}
-
-				/**
-				 * Filter the Thumbor Arguments added to an image when going through Thumbor,
-				 * when the image size is an array of height and width values.
-				 *
-				 * @param array $thumbor_args Array of Thumbor arguments.
-				 * @param array $args {
-				 *   Array of image details.
-				 *
-				 *   @type $width Image width.
-				 *   @type height Image height.
-				 *   @type $image_url Image URL.
-				 *   @type $attachment_id Attachment ID of the image.
-				 * }
-				 */
-				$thumbor_args = apply_filters( 'thumbor_image_downsize_array', $thumbor_args, compact( 'width', 'height', 'image_url', 'attachment_id' ) );
-
-				// Generate Thumbor URL.
-				$image = [
-					thumbor_url( $image_url, $thumbor_args ),
-					$width,
-					$height,
-					$is_intermediate,
-				];
-			}
+			$image = self::convert_image_url( $image, $image_url, $attachment_id, $size );
 		}
 
 		return $image;
@@ -1027,5 +859,207 @@ class ThumborImage {
 	 */
 	public function override_image_downsize_in_rest_edit_context() {
 		return true;
+	}
+
+	/**
+	 * Convert an image URL to the Thumbor equivalent.
+	 *
+	 * @param string|bool  $image Image array.
+	 * @param string       $image_url The image URL.
+	 * @param int          $attachment_id The attachment ID.
+	 * @param string|int[] $size Requested image size.
+	 * @return string|bool
+	 */
+	public static function convert_image_url( $image, $image_url, $attachment_id, $size ) {
+
+		// Check if image URL should be used with Thumbor.
+		if ( ! self::validate_image_url( $image_url ) ) {
+			return $image;
+		}
+
+		$full_size_meta  = wp_get_attachment_metadata( $attachment_id );
+		$is_intermediate = false;
+
+		// If an image is requested with a size known to WordPress, use that size's settings with Thumbor.
+		if ( ! empty( $full_size_meta ) && ( is_string( $size ) || is_int( $size ) ) && array_key_exists( $size, self::image_sizes() ) ) {
+			$image_args = self::image_sizes();
+			$image_args = $image_args[ $size ];
+
+			$thumbor_args = [];
+
+			$image_meta = image_get_intermediate_size( $attachment_id, $size );
+
+			// 'full' is a special case: We need consistent data regardless of the requested size.
+			if ( 'full' === $size ) {
+				$image_meta = $full_size_meta;
+			} elseif ( ! $image_meta ) {
+				// If we still don't have any image meta at this point, it's probably from a custom thumbnail size
+				// for an image that was uploaded before the custom image was added to the theme.  Try to determine the size manually.
+				$image_meta = $full_size_meta;
+				if ( isset( $image_meta['width'] ) && isset( $image_meta['height'] ) ) {
+					$image_resized = image_resize_dimensions( $image_meta['width'], $image_meta['height'], $image_args['width'], $image_args['height'], $image_args['crop'] );
+					if ( $image_resized ) { // This could be false when the requested image size is larger than the full-size image.
+						$image_meta['width']  = $image_resized[6];
+						$image_meta['height'] = $image_resized[7];
+						$is_intermediate      = true;
+					}
+				}
+			} else {
+				$is_intermediate = true;
+			}
+
+			// Expose determined arguments to a filter before passing to Thumbor.
+			$transform = $image_args['crop'] ? 'resize' : 'fit';
+
+			// If we can't get the width from the image size args, use the width of the
+			// image metadata. We only do this is image_args['width'] is not set, because
+			// we don't want to lose this data. $image_args is used as the Thumbor URL param
+			// args, so we want to keep the original image sizes args. For example, if the image
+			// size is 300x300px, non-cropped, we want to pass `fit=300,300` to Thumbor, instead
+			// of say `resize=300,225`, because semantically, the image size is registered as
+			// 300x300 un-cropped, not 300x225 cropped.
+			if ( empty( $image_args['width'] ) && $transform !== 'resize' ) {
+				$image_args['width'] = isset( $image_meta['width'] ) ? $image_meta['width'] : 0;
+			}
+
+			if ( empty( $image_args['height'] ) && $transform !== 'resize' ) {
+				$image_args['height'] = isset( $image_meta['height'] ) ? $image_meta['height'] : 0;
+			}
+
+			// Prevent upscaling.
+			$image_args['width']  = min( (int) $image_args['width'], (int) $full_size_meta['width'] );
+			$image_args['height'] = min( (int) $image_args['height'], (int) $full_size_meta['height'] );
+
+			// Respect $content_width settings.
+			list( $width, $height ) = image_constrain_size_for_editor( $image_meta['width'], $image_meta['height'], $size, 'display' );
+
+			// Check specified image dimensions and account for possible zero values; Thumbor fails to resize if a dimension is zero.
+			if ( ( 0 === $image_args['width'] || 0 === $image_args['height'] ) && $transform !== 'fit' ) {
+				if ( 0 === $image_args['width'] && 0 < $image_args['height'] ) {
+					$thumbor_args['h'] = $image_args['height'];
+				} elseif ( 0 === $image_args['height'] && 0 < $image_args['width'] ) {
+					$thumbor_args['w'] = $image_args['width'];
+				}
+			} else {
+				// Fit accepts a zero value for either dimension so we allow that.
+				// If resizing:
+				// Both width & height are required, image args should be exact dimensions.
+				if ( $transform === 'resize' ) {
+					$image_args['width']  = $image_args['width'] ?: $width;
+					$image_args['height'] = $image_args['height'] ?: $height;
+				}
+
+				$is_intermediate = ( $image_args['width'] < $full_size_meta['width'] || $image_args['height'] < $full_size_meta['height'] );
+
+				// Add transform args if size is intermediate.
+				if ( $is_intermediate ) {
+					$thumbor_args[ $transform ] = [ $image_args['width'], $image_args['height'] ];
+				}
+
+				if ( $is_intermediate && 'resize' === $transform && is_array( $image_args['crop'] ) ) {
+					$thumbor_args['gravity'] = implode(
+						'',
+						array_map(
+							function ( $v ) {
+								$map = [
+									'top'    => 'north',
+									'center' => '',
+									'bottom' => 'south',
+									'left'   => 'west',
+									'right'  => 'east',
+								];
+								return $map[ $v ];
+							},
+							array_reverse( $image_args['crop'] )
+						)
+					);
+				}
+			}
+
+			/**
+			 * Filter the Thumbor Arguments added to an image when going through Thumbor, when that image size is a string.
+			 * Image size will be a string (e.g. "full", "medium") when it is known to WordPress.
+			 *
+			 * @param array $thumbor_args Array of Thumbor arguments.
+			 * @param array $args {
+			 *   Array of image details.
+			 *
+			 *   @type $image_args Array of Image arguments (width, height, crop).
+			 *   @type $image_url Image URL.
+			 *   @type $attachment_id Attachment ID of the image.
+			 *   @type $size Image size. Can be a string (name of the image size, e.g. full) or an integer.
+			 *   @type $transform Value can be resize or fit.
+			 *                    @see https://developer.wordpress.com/docs/photon/api
+			 * }
+			 */
+			$thumbor_args = apply_filters( 'thumbor_image_downsize_string', $thumbor_args, compact( 'image_args', 'image_url', 'attachment_id', 'size', 'transform' ) );
+
+			// Generate Thumbor URL.
+			$image = [
+				thumbor_url( $image_url, $thumbor_args ),
+				$width,
+				$height,
+				$is_intermediate,
+			];
+		} elseif ( is_array( $size ) ) {
+			// Pull width and height values from the provided array, if possible.
+			$width  = isset( $size[0] ) ? (int) $size[0] : false;
+			$height = isset( $size[1] ) ? (int) $size[1] : false;
+
+			// Don't bother if necessary parameters aren't passed.
+			if ( ! $width || ! $height ) {
+				return $image;
+			}
+
+			$image_meta = wp_get_attachment_metadata( $attachment_id );
+			if ( isset( $image_meta['width'] ) && isset( $image_meta['height'] ) ) {
+				$image_resized = image_resize_dimensions( $image_meta['width'], $image_meta['height'], $width, $height );
+				if ( $image_resized ) {
+					// Use the resized image dimensions.
+					$width           = $image_resized[6];
+					$height          = $image_resized[7];
+					$is_intermediate = true;
+				} else {
+					// Resized image would be larger than original.
+					$width  = $image_meta['width'];
+					$height = $image_meta['height'];
+				}
+			}
+
+			list( $width, $height ) = image_constrain_size_for_editor( $width, $height, $size );
+
+			$thumbor_args = [];
+
+			// Expose arguments to a filter before passing to Thumbor.
+			if ( $is_intermediate ) {
+				$thumbor_args['fit'] = [ $width, $height ];
+			}
+
+			/**
+			 * Filter the Thumbor Arguments added to an image when going through Thumbor,
+			 * when the image size is an array of height and width values.
+			 *
+			 * @param array $thumbor_args Array of Thumbor arguments.
+			 * @param array $args {
+			 *   Array of image details.
+			 *
+			 *   @type $width Image width.
+			 *   @type height Image height.
+			 *   @type $image_url Image URL.
+			 *   @type $attachment_id Attachment ID of the image.
+			 * }
+			 */
+			$thumbor_args = apply_filters( 'thumbor_image_downsize_array', $thumbor_args, compact( 'width', 'height', 'image_url', 'attachment_id' ) );
+
+			// Generate Thumbor URL.
+			$image = [
+				thumbor_url( $image_url, $thumbor_args ),
+				$width,
+				$height,
+				$is_intermediate,
+			];
+		}
+
+		return $image;
 	}
 }
