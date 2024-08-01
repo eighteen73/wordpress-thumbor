@@ -16,15 +16,18 @@ use Eighteen73\Thumbor\ThumborImage;
 
 spl_autoload_register(
 	function ( $class_name ) {
-		$path_parts = explode( '\\', $class_name );
-
-		if ( ! empty( $path_parts ) ) {
-			$package = $path_parts[0];
-
-			unset( $path_parts[0] );
-
-			if ( 'Eighteen73' === $package ) {
-				require_once __DIR__ . '/includes/classes/' . implode( '/', $path_parts ) . '.php';
+		$namspaces = [
+			'Eighteen73\\Thumbor\\' => __DIR__ . '/includes/classes/',
+		];
+		foreach ( $namspaces as $prefix => $base_dir ) {
+			$len = strlen( $prefix );
+			if ( 0 !== strncmp( $prefix, $class_name, $len ) ) {
+				return;
+			}
+			$relative_class = substr( $class_name, $len );
+			$file           = $base_dir . str_replace( '\\', '/', $relative_class ) . '.php';
+			if ( file_exists( $file ) ) {
+				require $file;
 			}
 		}
 	}
