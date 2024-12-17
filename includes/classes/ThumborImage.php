@@ -817,7 +817,7 @@ class ThumborImage {
 			}
 		}
 
-		$size_array = array_unique( $size_array );
+		$sources = array_unique( $sources );
 
 		foreach ( $sources as $i => $source ) {
 			if ( ! self::validate_image_url( $source['url'] ) ) {
