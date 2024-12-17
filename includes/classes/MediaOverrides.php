@@ -18,8 +18,6 @@ class MediaOverrides {
 	 */
 	private static $instance = null;
 
-	private $sizes = [];
-
 	/**
 	 * Singleton implementation
 	 *
