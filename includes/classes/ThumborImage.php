@@ -801,9 +801,7 @@ class ThumborImage {
 	public function filter_srcset_array( $sources, $size_array, $image_src, $image_meta, $attachment_id ) {
 		$upload_dir = wp_upload_dir();
 
-		$image_sizes = self::image_sizes();
-
-		foreach ( $image_sizes as $size_name => $size_data ) {
+		foreach ( $image_meta['sizes'] as $size_name => $size_data ) {
 			if ( isset( $size_data['width'] ) ) {
 				$sources[ $size_data['width'] ] = [
 					'url' => $image_src,
