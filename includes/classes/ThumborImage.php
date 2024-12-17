@@ -74,9 +74,9 @@ class ThumborImage {
 	 */
 	private function setup() {
 
-		if ( ! function_exists( 'thumbor_url' ) ) {
-			return;
-		}
+		// if ( ! function_exists( 'thumbor_url' ) ) {
+		// 	return;
+		// }
 
 		// Images in post content and galleries.
 		add_filter( 'the_content', [ __CLASS__, 'filter_the_content' ], 999999 );
@@ -797,7 +797,27 @@ class ThumborImage {
 	 * @return array An array of Thumbor image urls and widths.
 	 */
 	public function filter_srcset_array( $sources, $size_array, $image_src, $image_meta, $attachment_id ) {
+		$dirname = _wp_get_attachment_relative_path( $image_meta['file'] );
+
+		if ( $dirname ) {
+			$dirname = trailingslashit( $dirname );
+		}
+
 		$upload_dir = wp_upload_dir();
+		$image_baseurl = trailingslashit( $upload_dir['baseurl'] ) . $dirname;
+
+		foreach ( $image_meta['sizes'] as $size_data ) {
+			if ( isset( $size_data['width'] ) ) {
+				// Construct the source array for this size
+				$sources[ $size_data['width'] ] = [
+					'url' => $image_baseurl . $size_data['file'], // Full URL of the image
+					'descriptor' => 'w', // Descriptor for width
+					'value' => $size_data['width'], // The width value
+				];
+			}
+		}
+
+		$size_array = array_unique( $size_array );
 
 		foreach ( $sources as $i => $source ) {
 			if ( ! self::validate_image_url( $source['url'] ) ) {
