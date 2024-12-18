@@ -121,6 +121,44 @@ class ThumborImage {
 	}
 
 	/**
+	 * Match all elements with background-image styles in a block of HTML.
+	 *
+	 * @param string $content Some HTML.
+	 * @return array An array of matches, where each match includes:
+	 *         - 'element' (full matched element string),
+	 *         - 'background_image' (the extracted background image URL),
+	 *         - 'attributes' (optional context such as id, class).
+	 */
+	public static function parse_background_images_from_html( $content ) {
+		$background_images = [];
+
+		if ( preg_match_all( 
+			'#<(?P<element>[a-zA-Z][^>]*?)style=["\'][^>]*?background-image\s*:\s*url\s*\(\s*(?P<background_image>[^\s)]+)\s*\)[^>]*?["\'][^>]*?>#is', 
+			$content, 
+			$matches 
+		) ) {
+			foreach ( $matches['background_image'] as $index => $background_image ) {
+				$attributes = [];
+				
+				if ( preg_match( '#class=["\'](?P<class>[^"\']+)["\']#i', $matches[0][$index], $class_match ) ) {
+					$attributes['class'] = $class_match['class'];
+				}
+				if ( preg_match( '#id=["\'](?P<id>[^"\']+)["\']#i', $matches[0][$index], $id_match ) ) {
+					$attributes['id'] = $id_match['id'];
+				}
+
+				$background_images[] = [
+					'element' => $matches[0][$index],
+					'background_image' => $background_image,
+					'attributes' => $attributes,
+				];
+			}
+		}
+
+		return $background_images;
+	}
+
+	/**
 	 * Try to determine height and width from strings WP appends to resized image filenames.
 	 *
 	 * @param string $src The image URL.
@@ -151,6 +189,7 @@ class ThumborImage {
 	 */
 	public static function filter_the_content( $content ) {
 		$images = static::parse_images_from_html( $content );
+		$background_images = static::parse_background_images_from_html( $content );
 
 		if ( ! empty( $images ) ) {
 			$content_width = isset( $GLOBALS['content_width'] ) ? $GLOBALS['content_width'] : false;
@@ -509,6 +548,25 @@ class ThumborImage {
 					$new_tag = preg_replace( '#(href=["|\'])' . $images['link_url'][ $index ] . '(["|\'])#i', '\1' . thumbor_url( $images['link_url'][ $index ] ) . '\2', $tag, 1 );
 
 					$content = str_replace( $tag, $new_tag, $content );
+				}
+			}
+		}
+
+		if ( ! empty( $background_images ) ) {
+			foreach ( $background_images as $bg_image ) {
+				$src = $bg_image['background_image'];
+				$element = $bg_image['element'];
+		
+				// Validate background image URL.
+				if ( self::validate_image_url( $src ) ) {
+					// Generate Thumbor URL.
+					$thumbor_url = thumbor_url( $src );
+		
+					// Replace the original background image URL in the element.
+					$updated_element = str_replace( $src, esc_url( $thumbor_url ), $element );
+		
+					// Replace the original element in the content.
+					$content = str_replace( $element, $updated_element, $content );
 				}
 			}
 		}
