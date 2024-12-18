@@ -89,6 +89,8 @@ class ThumborImage {
 
 		// Responsive image srcset substitution.
 		add_filter( 'wp_calculate_image_srcset', [ $this, 'filter_srcset_array' ], 10, 5 );
+
+		add_filter( 'wp_get_attachment_metadata', [ $this, 'add_sizes_to_metadata' ], 10, 2 );
 	}
 
 	/**
@@ -857,6 +859,16 @@ class ThumborImage {
 	public function filter_srcset_array( $sources, $size_array, $image_src, $image_meta, $attachment_id ) {
 		$upload_dir = wp_upload_dir();
 
+		foreach ( $image_meta['sizes'] as $size_name => $size_data ) {
+			if ( isset( $size_data['width'] ) ) {
+				$sources[ $size_data['width'] ] = [
+					'url' => $image_src,
+					'descriptor' => 'w',
+					'value' => $size_data['width'],
+				];
+			}
+		}
+
 		foreach ( $sources as $i => $source ) {
 			if ( ! self::validate_image_url( $source['url'] ) ) {
 				continue;
@@ -1085,5 +1097,43 @@ class ThumborImage {
 	 */
 	public function override_image_downsize_in_rest_edit_context() {
 		return true;
+	}
+
+	/**
+	 * Adds predefined image sizes to attachment metadata if no sizes are present.
+	 *
+	 * @param array $metadata      The attachment metadata.
+	 * @param int   $attachment_id The ID of the attachment.
+	 *
+	 * @return array The modified attachment metadata with added size information.
+	 */
+	public function add_sizes_to_metadata( $metadata, $attachment_id ) {
+		if ( isset( $metadata['file'] ) && empty( $metadata['sizes'] ) ) {
+			$image_sizes = self::image_sizes();
+
+			// Construct filename without folders for metadata
+			$dirname = _wp_get_attachment_relative_path( $metadata['file'] );
+			$filename = pathinfo( $metadata['file'], PATHINFO_FILENAME );
+			$extension = pathinfo( $metadata['file'], PATHINFO_EXTENSION );
+	
+			if ( $dirname ) {
+				$dirname = trailingslashit( $dirname );
+			}
+	
+			foreach ( $image_sizes as $size_name => $size_data ) {
+				if ( empty( $size_data['width'] ) || empty( $size_data['height'] ) ) {
+					continue; // Skip sizes without dimensions
+				}
+	
+				$metadata['sizes'][ $size_name ] = [
+					'file'      => $filename . '.' .$extension,
+					'width'     => $size_data['width'],
+					'height'    => $size_data['height'],
+					'mime-type' => get_post_mime_type( $attachment_id ),
+				];
+			}
+		}
+	
+		return $metadata;
 	}
 }
