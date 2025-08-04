@@ -134,14 +134,14 @@ class ThumborImage {
 	public static function parse_background_images_from_html( $content ) {
 		$background_images = [];
 
-		if ( preg_match_all( 
-			'#<(?P<element>[a-zA-Z][^>]*?)style=["\'][^>]*?background-image\s*:\s*url\s*\(\s*(?P<background_image>[^\s)]+)\s*\)[^>]*?["\'][^>]*?>#is', 
-			$content, 
-			$matches 
+		if ( preg_match_all(
+			'#<(?P<element>[a-zA-Z][^>]*?)style=["\'][^>]*?background-image\s*:\s*url\s*\(\s*(?P<background_image>[^\s)]+)\s*\)[^>]*?["\'][^>]*?>#is',
+			$content,
+			$matches
 		) ) {
 			foreach ( $matches['background_image'] as $index => $background_image ) {
 				$attributes = [];
-				
+
 				if ( preg_match( '#class=["\'](?P<class>[^"\']+)["\']#i', $matches[0][$index], $class_match ) ) {
 					$attributes['class'] = $class_match['class'];
 				}
@@ -558,15 +558,15 @@ class ThumborImage {
 			foreach ( $background_images as $bg_image ) {
 				$src = $bg_image['background_image'];
 				$element = $bg_image['element'];
-		
+
 				// Validate background image URL.
 				if ( self::validate_image_url( $src ) ) {
 					// Generate Thumbor URL.
 					$thumbor_url = thumbor_url( $src );
-		
+
 					// Replace the original background image URL in the element.
 					$updated_element = str_replace( $src, esc_url( $thumbor_url ), $element );
-		
+
 					// Replace the original element in the content.
 					$content = str_replace( $element, $updated_element, $content );
 				}
@@ -645,6 +645,15 @@ class ThumborImage {
 		 */
 		$override_image_downsize = apply_filters( 'thumbor_override_image_downsize', false, compact( 'image', 'attachment_id', 'size' ) );
 
+		/**
+		 * Provide plugins a way of allowing Thumbor to generate an upscaled image to ensure the correct size is used.
+		 *
+		 * @since 0.1.2
+		 *
+		 * @param bool false Allow thumbor to generate an upscaled image. Default to false.
+		 */
+		$allow_image_upscaling = apply_filters( 'thumbor_allow_image_upscaling', false );
+
 		if ( $disable_in_admin || $override_image_downsize ) {
 			return $image;
 		}
@@ -707,8 +716,10 @@ class ThumborImage {
 				}
 
 				// Prevent upscaling.
-				$image_args['width']  = min( (int) $image_args['width'], (int) $full_size_meta['width'] );
-				$image_args['height'] = min( (int) $image_args['height'], (int) $full_size_meta['height'] );
+				if ( ! $allow_image_upscaling ) {
+					$image_args['width']  = min( (int) $image_args['width'], (int) $full_size_meta['width'] );
+					$image_args['height'] = min( (int) $image_args['height'], (int) $full_size_meta['height'] );
+				}
 
 				// Respect $content_width settings.
 				list( $width, $height ) = image_constrain_size_for_editor( $image_meta['width'], $image_meta['height'], $size, 'display' );
@@ -729,7 +740,9 @@ class ThumborImage {
 						$image_args['height'] = $image_args['height'] ?: $height;
 					}
 
-					$is_intermediate = ( $image_args['width'] < $full_size_meta['width'] || $image_args['height'] < $full_size_meta['height'] );
+					if ( ! $allow_image_upscaling ) {
+						$is_intermediate = ( $image_args['width'] < $full_size_meta['width'] || $image_args['height'] < $full_size_meta['height'] );
+					}
 
 					// Add transform args if size is intermediate.
 					if ( $is_intermediate ) {
@@ -1115,16 +1128,16 @@ class ThumborImage {
 			$dirname = _wp_get_attachment_relative_path( $metadata['file'] );
 			$filename = pathinfo( $metadata['file'], PATHINFO_FILENAME );
 			$extension = pathinfo( $metadata['file'], PATHINFO_EXTENSION );
-	
+
 			if ( $dirname ) {
 				$dirname = trailingslashit( $dirname );
 			}
-	
+
 			foreach ( $image_sizes as $size_name => $size_data ) {
 				if ( empty( $size_data['width'] ) || empty( $size_data['height'] ) ) {
 					continue; // Skip sizes without dimensions
 				}
-	
+
 				$metadata['sizes'][ $size_name ] = [
 					'file'      => $filename . '.' .$extension,
 					'width'     => $size_data['width'],
@@ -1133,7 +1146,7 @@ class ThumborImage {
 				];
 			}
 		}
-	
+
 		return $metadata;
 	}
 }
