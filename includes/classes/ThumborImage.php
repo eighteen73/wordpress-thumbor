@@ -142,15 +142,15 @@ class ThumborImage {
 			foreach ( $matches['background_image'] as $index => $background_image ) {
 				$attributes = [];
 
-				if ( preg_match( '#class=["\'](?P<class>[^"\']+)["\']#i', $matches[0][$index], $class_match ) ) {
+				if ( preg_match( '#class=["\'](?P<class>[^"\']+)["\']#i', $matches[0][ $index ], $class_match ) ) {
 					$attributes['class'] = $class_match['class'];
 				}
-				if ( preg_match( '#id=["\'](?P<id>[^"\']+)["\']#i', $matches[0][$index], $id_match ) ) {
+				if ( preg_match( '#id=["\'](?P<id>[^"\']+)["\']#i', $matches[0][ $index ], $id_match ) ) {
 					$attributes['id'] = $id_match['id'];
 				}
 
 				$background_images[] = [
-					'element' => $matches[0][$index],
+					'element' => $matches[0][ $index ],
 					'background_image' => $background_image,
 					'attributes' => $attributes,
 				];
@@ -1139,7 +1139,7 @@ class ThumborImage {
 				}
 
 				$metadata['sizes'][ $size_name ] = [
-					'file'      => $filename . '.' .$extension,
+					'file'      => $filename . '.' . $extension,
 					'width'     => $size_data['width'],
 					'height'    => $size_data['height'],
 					'mime-type' => get_post_mime_type( $attachment_id ),
