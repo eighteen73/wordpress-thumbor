@@ -37,6 +37,14 @@ define( 'THUMBOR_UPLOAD_IMAGE_THRESHOLD', 2000 );
 
 See [`big_image_size_threshold`](https://developer.wordpress.org/reference/hooks/big_image_size_threshold/) docs for more information.
 
+### Optional: Allow image upscaling
+
+By default image upscaling is disabled. However we have had the occasional need for this, so to enable this feature you can use this filter in your theme:
+
+```php
+add_filter('thumbor_allow_image_upscaling', '__return_true');
+```
+
 ### Optional: Delete prior image files
 
 Once the plugin is enabled you can make use of a WP-CLI command to delete any image derivatives that have already been created.
